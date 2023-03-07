@@ -46,5 +46,28 @@ export const MISC =
      * @param {any} vectorJson vector in json format
      * @returns {THREE.Vector3} threejs vector object
      */    
-    toThreeJSVector : function(vectorJson) { return new Vector3(vectorJson.x, vectorJson.y, vectorJson.z) }
+    toThreeJSVector : function(vectorJson) { return new Vector3(vectorJson.x, vectorJson.y, vectorJson.z) },
+
+    /**
+     * Multiplies two colors
+     * @param {THREE.Color} color1 first color
+     * @param {THREE.Color} color2 second color
+     * @returns {THREE.Color} the final multiplied color
+     */
+    multiplyColors : function(color1, color2) { return new Color(color1.r * color2.r, color1.g * color2.g, color1.b * color2.b) },
+    
+    /**
+     * Interpolates between two colors.
+     * @param {THREE.Color} color1 first color. The rgb values should range between 0 to 1
+     * @param {THREE.Color} color2 second color. The rgb values should range between 0 to 1
+     * @param {THREE.Color} weight value used in interpolation. Should range between 0 to 1
+     * @returns 
+     */
+    interpolateColors : function(color1, color2, weight)
+    {
+        let r = (color1.r * weight) + (color2.r * (1 - weight))
+        let g = (color1.g * weight) + (color2.g * (1 - weight))
+        let b = (color1.b * weight) + (color2.b * (1 - weight))
+        return new Color(r, g, b)
+    }
 }

@@ -65,10 +65,22 @@ export const MATHS =
     toDegrees : function(radians) { return (radians * 7 * 180)/22 },
 
     /**
-     * 
+     * Calculates the dot product between two vectors.
      * @param {THREE.Vector3} v1 first 3D vector
      * @param {THREE.Vector3} v2 second 3D vector
      * @returns {Number} dot product of two input 3D vectors 
      */
-    dot : function (v1, v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z  }
+    dot : function (v1, v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z  },
+
+    /**
+     * Calculates cosine of the angle between two vectors
+     * @param {THREE.Vector3} v1 first 3D vector
+     * @param {THREE.Vector3} v2 second 3D vector
+     */
+    cosineVectors: function(v1, v2)
+    {
+        let v1Normalized = MATHS.normalize(v1)
+        let v2Normalized = MATHS.normalize(v2)
+        return MATHS.dot(v1Normalized, v2Normalized)
+    }
 }

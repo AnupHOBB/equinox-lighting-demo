@@ -13,7 +13,20 @@ export class AmbientLight extends SceneObject
     {
         super()
         this.name = name 
-        this.light = new THREE.AmbientLight(color, intensity) 
+        this.light = new THREE.AmbientLight(color, intensity)
+        this.intensity = intensity
+    }
+
+    /**
+     * Called by SceneManager when there is a message for this object posted by any other object registered in SceneManager.
+     * @param {SceneManager} sceneManager the SceneManager object
+     * @param {String} senderName name of the object who posted the message
+     * @param {any} data any object sent as part of the message
+     */
+    onMessage(sceneManager, senderName, data) 
+    {
+        if (senderName == 'DirectLight')    
+            this.light.intensity = this.intensity * data
     }
 
     /**
@@ -46,7 +59,8 @@ export class DirectLight extends SceneObject
         this.name = name 
         this.enableGizmo = false
         this.enabled = false
-        this.light = new THREE.DirectionalLight(0xffffff, 0.2)
+        this.intensity = 1
+        this.light = new THREE.DirectionalLight(new THREE.Color(1, 1, 1), this.intensity)
         this.light.position.set(position.x, position.y, position.z)  
         this.light.castShadow = true
         this.light.shadow.mapSize.width = 1024
@@ -63,11 +77,15 @@ export class DirectLight extends SceneObject
         this.mesh.position.set(position.x, position.y, position.z)
         this.lightOrbiter = new OrbitControl(this.light, lookAt)
         this.meshOrbiter = new OrbitControl(this.mesh, lookAt)
+        this.lookAt = lookAt
 
         let vLookat2Light = MATHS.subtractVectors(this.light.position, lookAt)
         let right =  MATHS.normalize(new THREE.Vector3(vLookat2Light.x, 0, vLookat2Light.z))
         this.seasonAxis = MISC.toThreeJSVector(MATHS.cross(new THREE.Vector3(0, -1, 0), right))
         this.daynightAxis = new THREE.Vector3(1, 0, 0)
+
+        this.daynightColor = new THREE.Color(1, 1, 1)
+        this.seasonColor = new THREE.Color(1, 1, 1)
     }
 
     /**
@@ -97,18 +115,42 @@ export class DirectLight extends SceneObject
     { 
         if (senderName == 'SliderDirection')
         {    
-            this.orbit(data, new THREE.Vector3(0, 1, 0))
-            this.daynightAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data))
-            this.seasonAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data))
+            this.orbit(data.delta, new THREE.Vector3(0, 1, 0))
+            this.daynightAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data.delta))
+            this.seasonAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data.delta))
+            this.updateLightIntensity(sceneManager)
         }
         else if (senderName == 'SliderDaynight')
         {    
-            this.orbit(data, this.daynightAxis)
-            this.seasonAxis.applyAxisAngle(this.daynightAxis, MATHS.toRadians(data))
+            this.orbit(data.delta, this.daynightAxis)
+            this.seasonAxis.applyAxisAngle(this.daynightAxis, MATHS.toRadians(data.delta))
+            this.updateLightIntensity(sceneManager, 'daynight', data.percent)
         }
         else if (senderName == 'SliderSeason')
-            this.orbit(data, this.seasonAxis)
+        {    
+            this.orbit(data.delta, this.seasonAxis)
+            this.updateLightIntensity(sceneManager, 'season', data.percent)
+        }
     }
+
+    updateLightIntensity(sceneManager, type, percent)
+    {
+        let vLookat2Light = MATHS.subtractVectors(this.light.position, this.lookAt)
+        let cosine = MATHS.cosineVectors(new THREE.Vector3(0, 1, 0), vLookat2Light)
+        this.light.intensity = this.intensity * cosine
+        sceneManager.broadcastTo('DirectLight', 'AmbientLight', cosine)
+        if (type == 'season')    
+            this.daynightColor = MISC.interpolateColors(new THREE.Color(118/255, 177/255, 212/255), new THREE.Color(1, 1, 1), percent)
+        else if (type == 'daynight')  
+            this.seasonColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
+        this.light.color = MISC.multiplyColors(this.daynightColor, this.seasonColor)
+    }
+
+    /**
+     * Called by SceneManager as soon as the object gets registered in SceneManager.
+     * @param {SceneManager} sceneManager the SceneManager object
+     */
+    onSceneStart(sceneManager) { this.updateLightIntensity(sceneManager, 'season', 0) }
 
     /**
      * Called by SceneManager every frame.

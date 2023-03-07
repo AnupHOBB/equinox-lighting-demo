@@ -33,10 +33,10 @@ function onComplete(assetMap)
     roof.setPosition(2, -2, -3)
     sceneManager.register(roof)
     
-    let ambientLight = new AmbientLight('AmbientLight', 0xffffff, 0.8)
+    let ambientLight = new AmbientLight('AmbientLight', 0xffffff, 1)
     sceneManager.register(ambientLight)
     
-    let directLight = new DirectLight('DirectLight', new THREE.Vector3(100, 50, 0), 5, new THREE.Vector3(0, 0, -4))
+    let directLight = new DirectLight('DirectLight', new THREE.Vector3(30, 108, -2.8), 5, new THREE.Vector3(0, 0, -4))//80, 78, -0.8
     sceneManager.register(directLight)
     
     let background = new ShapeActor('Background', new THREE.SphereGeometry(100, 256, 16),  new THREE.MeshBasicMaterial( { color: 0xffffff,  map: assetMap.get('./assets/envmap.png'), side: THREE.BackSide }))
@@ -44,28 +44,31 @@ function onComplete(assetMap)
     sceneManager.register(background)
 
     const lookAtPosition = new THREE.Vector3(0, 0, -5)
-    let cameraManager = new OrbitalCameraManager('Camera', 90, lookAtPosition)
+    let cameraManager = new FirstPersonCameraManager('Camera', 90, lookAtPosition)
     sceneManager.register(cameraManager)
     sceneManager.setActiveCamera('Camera')
 
     let prevSliderDirectionValue = 0
     let sliderDirection = document.getElementById('slider-direction')
     sliderDirection.addEventListener('input', ()=>{
-        sceneManager.broadcastTo('SliderDirection', 'DirectLight', sliderDirection.value - prevSliderDirectionValue)
+        sceneManager.broadcastTo('SliderDirection', 'DirectLight', { delta: sliderDirection.value - prevSliderDirectionValue, percent: sliderDirection.value/sliderDirection.max })
         prevSliderDirectionValue = sliderDirection.value
     })
 
     let prevSliderDaynight = 0
     let sliderDaynight = document.getElementById('slider-daynight')
     sliderDaynight.addEventListener('input', ()=>{
-        sceneManager.broadcastTo('SliderDaynight', 'DirectLight', sliderDaynight.value - prevSliderDaynight)
+        let value = sliderDaynight.value
+        if (value < 0)
+            value = -value
+        sceneManager.broadcastTo('SliderDaynight', 'DirectLight', { delta: sliderDaynight.value - prevSliderDaynight, percent: value/sliderDaynight.max } )
         prevSliderDaynight = sliderDaynight.value
     })
 
     let prevSliderSeason = 0
     let sliderSeason = document.getElementById('slider-season')
     sliderSeason.addEventListener('input', ()=> {
-        sceneManager.broadcastTo('SliderSeason', 'DirectLight', sliderSeason.value - prevSliderSeason)
+        sceneManager.broadcastTo('SliderSeason', 'DirectLight', { delta: prevSliderSeason - sliderSeason.value, percent: sliderSeason.value/sliderSeason.max })
         prevSliderSeason = sliderSeason.value
     })
 }
