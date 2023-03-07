@@ -59,11 +59,15 @@ export class DirectLight extends SceneObject
         this.light.shadow.camera.top = 10
         this.light.shadow.bias = -0.0005
         this.gizmo = new THREE.CameraHelper(this.light.shadow.camera) 
-        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 32), new THREE.MeshBasicMaterial({color: 0xFCE570}))
+        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 32), new THREE.MeshPhongMaterial({color: 0xFCE570, emissive: 0xFCE570}))
         this.mesh.position.set(position.x, position.y, position.z)
         this.lightOrbiter = new OrbitControl(this.light, lookAt)
         this.meshOrbiter = new OrbitControl(this.mesh, lookAt)
-        this.lookAt = lookAt
+
+        let vLookat2Light = MATHS.subtractVectors(this.light.position, lookAt)
+        let right =  MATHS.normalize(new THREE.Vector3(vLookat2Light.x, 0, vLookat2Light.z))
+        this.seasonAxis = MISC.toThreeJSVector(MATHS.cross(new THREE.Vector3(0, -1, 0), right))
+        this.daynightAxis = new THREE.Vector3(1, 0, 0)
     }
 
     /**
@@ -75,24 +79,12 @@ export class DirectLight extends SceneObject
     /**
      * Moves the light and the sphere mesh around an orbit 
      * @param {Number} speed float value used for controlling the orbit speed.
+     * @param {THREE.Vector3} axis axis about which the light would rotate.
      */
-    orbit(speed) 
+    orbit(speed, axis) 
     { 
-        this.lightOrbiter.pan(new THREE.Vector3(0, 1, 0), speed)
-        this.meshOrbiter.pan(new THREE.Vector3(0, 1, 0), speed)
-    }
-
-    /**
-     * Moves the light from east to west
-     * @param {Number} speed float value used for controlling the movement speed.
-     */
-    moveEastToWest(speed)
-    {
-        let vRoofToLight = MISC.toThreeJSVector(MATHS.subtractVectors(this.light.position, this.lookAt))
-        vRoofToLight.applyAxisAngle(new THREE.Vector3(0, 0, 1), MATHS.toRadians(speed))
-        let newPosition = MATHS.addVectors(this.lookAt, vRoofToLight)
-        this.light.position.set(newPosition.x, newPosition.y, newPosition.z)
-        this.mesh.position.set(newPosition.x, newPosition.y, newPosition.z)
+        this.lightOrbiter.pan(axis, speed)
+        this.meshOrbiter.pan(axis, speed)
     }
 
     /**
@@ -103,8 +95,19 @@ export class DirectLight extends SceneObject
      */
     onMessage(sceneManager, senderName, data) 
     { 
-        if (senderName == 'Slider')
-            this.moveEastToWest(data)
+        if (senderName == 'SliderDirection')
+        {    
+            this.orbit(data, new THREE.Vector3(0, 1, 0))
+            this.daynightAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data))
+            this.seasonAxis.applyAxisAngle(new THREE.Vector3(0, 1, 0), MATHS.toRadians(data))
+        }
+        else if (senderName == 'SliderDaynight')
+        {    
+            this.orbit(data, this.daynightAxis)
+            this.seasonAxis.applyAxisAngle(this.daynightAxis, MATHS.toRadians(data))
+        }
+        else if (senderName == 'SliderSeason')
+            this.orbit(data, this.seasonAxis)
     }
 
     /**
