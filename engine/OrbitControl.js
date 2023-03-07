@@ -58,7 +58,7 @@ class OrbitControlCore
     {
         this.object3D = object3D
         this.lookAtPosition = lookAtPosition
-        this.shouldMoveFunction = (shouldMoveFunction == undefined) ? (v)=>{return true} : shouldMoveFunction
+        this.shouldMoveFunction = (shouldMoveFunction == undefined) ? (v)=>{return [true, v]} : shouldMoveFunction
         this.isOrbit = false
     }
 
