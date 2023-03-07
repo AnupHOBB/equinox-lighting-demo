@@ -139,11 +139,12 @@ export class DirectLight extends SceneObject
         let cosine = MATHS.cosineVectors(new THREE.Vector3(0, 1, 0), vLookat2Light)
         this.light.intensity = this.intensity * cosine
         sceneManager.broadcastTo('DirectLight', 'AmbientLight', cosine)
-        if (type == 'season')    
-            this.daynightColor = MISC.interpolateColors(new THREE.Color(118/255, 177/255, 212/255), new THREE.Color(1, 1, 1), percent)
+        if (type == 'season')
+            this.daynightColor = MISC.interpolateColors(new THREE.Color(164/255, 191/255, 210/255), new THREE.Color(1, 1, 1), percent)
         else if (type == 'daynight')  
             this.seasonColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
         this.light.color = MISC.multiplyColors(this.daynightColor, this.seasonColor)
+        sceneManager.broadcastTo('DirectLight', 'Background', this.light.color)
     }
 
     /**

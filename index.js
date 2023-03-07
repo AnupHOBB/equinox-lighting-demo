@@ -39,12 +39,12 @@ function onComplete(assetMap)
     let directLight = new DirectLight('DirectLight', new THREE.Vector3(30, 108, -2.8), 5, new THREE.Vector3(0, 0, -4))//80, 78, -0.8
     sceneManager.register(directLight)
     
-    let background = new ShapeActor('Background', new THREE.SphereGeometry(100, 256, 16),  new THREE.MeshBasicMaterial( { color: 0xffffff,  map: assetMap.get('./assets/envmap.png'), side: THREE.BackSide }))
+    let background = new ShapeActor('Background', new THREE.SphereGeometry(200, 256, 16),  new THREE.MeshBasicMaterial( { color: 0xffffff,  map: assetMap.get('./assets/envmap.png'), side: THREE.BackSide }))
     background.setPosition(2, 0, -5)
     sceneManager.register(background)
 
     const lookAtPosition = new THREE.Vector3(0, 0, -5)
-    let cameraManager = new FirstPersonCameraManager('Camera', 90, lookAtPosition)
+    let cameraManager = new OrbitalCameraManager('Camera', 90, lookAtPosition)
     sceneManager.register(cameraManager)
     sceneManager.setActiveCamera('Camera')
 
@@ -58,10 +58,7 @@ function onComplete(assetMap)
     let prevSliderDaynight = 0
     let sliderDaynight = document.getElementById('slider-daynight')
     sliderDaynight.addEventListener('input', ()=>{
-        let value = sliderDaynight.value
-        if (value < 0)
-            value = -value
-        sceneManager.broadcastTo('SliderDaynight', 'DirectLight', { delta: sliderDaynight.value - prevSliderDaynight, percent: value/sliderDaynight.max } )
+        sceneManager.broadcastTo('SliderDaynight', 'DirectLight', { delta: sliderDaynight.value - prevSliderDaynight, percent: sliderDaynight.value/sliderDaynight.max } )
         prevSliderDaynight = sliderDaynight.value
     })
 

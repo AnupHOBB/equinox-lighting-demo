@@ -51,6 +51,14 @@ export class ShapeActor extends SceneObject
      * @returns {Boolean} drawable status of object
      */
     isDrawable() { return true }
+
+    /**
+     * Called by SceneManager when there is a message for this object posted by any other object registered in SceneManager.
+     * @param {SceneManager} sceneManager the SceneManager object
+     * @param {String} senderName name of the object who posted the message
+     * @param {any} data any object sent as part of the message
+     */
+    onMessage(sceneManager, senderName, data) { this.mesh.material.color = data }
 }
 
 /**
