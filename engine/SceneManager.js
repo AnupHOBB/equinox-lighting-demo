@@ -120,6 +120,12 @@ class SceneCore
         this.inactiveObjNameMap = new Map()
         this.noticeBoard = []
         window.requestAnimationFrame(()=>this.renderLoop())
+        this.fpsCounter = 0
+        this.fpsCounterElement = document.getElementById('fps-counter')
+        setInterval(()=>{
+            this.fpsCounterElement.innerHTML = 'FPS : '+this.fpsCounter
+            this.fpsCounter = 0
+        }, 1000)
     }
 
     /**
@@ -240,6 +246,7 @@ class SceneCore
             this.renderer.render(this.scene, this.activeCameraManager.getCamera())
             this.notifyObjects()
         }
+        this.fpsCounter++
         window.requestAnimationFrame(()=>this.renderLoop())
     }
 
