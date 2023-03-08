@@ -36,10 +36,10 @@ export class AmbientLight extends SceneObject
     isReady() { return true }
 
     /**
-     * Returns the list of drawable threejs meshes
-     * @returns {Array} array of threejs mesh objects
+     * Returns the list of lights attached with this object
+     * @returns {Array} array of threejs lights
      */
-    getDrawables() { return [{object: this.light, isRayCastable: false}] }
+    getLights() { return [{object: this.light, isRayCastable: false}] }
 
     /**
      * Used for notifying the SceneManager if this object is drawable in screen.
@@ -135,14 +135,18 @@ export class DirectLight extends SceneObject
 
     updateLightIntensity(sceneManager, type, percent)
     {
-        let vLookat2Light = MATHS.subtractVectors(this.light.position, this.lookAt)
+        let vLookat2Light = MATHS.subtractVectors(this.mesh.position, this.lookAt)
         let cosine = MATHS.cosineVectors(new THREE.Vector3(0, 1, 0), vLookat2Light)
         this.light.intensity = this.intensity * cosine
         sceneManager.broadcastTo('DirectLight', 'AmbientLight', cosine)
         if (type == 'season')
-            this.daynightColor = MISC.interpolateColors(new THREE.Color(188/255, 206/255, 222/255), new THREE.Color(1, 1, 1), percent)
+            this.seasonColor = MISC.interpolateColors(new THREE.Color(188/255, 206/255, 222/255), new THREE.Color(1, 1, 1), percent)
         else if (type == 'daynight')  
-            this.seasonColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
+        {
+            this.daynightColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
+            this.mesh.material.color = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(252/255, 229/255, 112/255), percent)
+            this.mesh.material.emissive = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(252/255, 229/255, 112/255), percent)
+        }
         this.light.color = MISC.multiplyColors(this.daynightColor, this.seasonColor)
         sceneManager.broadcastTo('DirectLight', 'Background', this.light.color)
     }
@@ -182,7 +186,13 @@ export class DirectLight extends SceneObject
      * Returns the list of drawable threejs meshes
      * @returns {Array} array of threejs mesh objects
      */
-    getDrawables() { return [{object: this.light, isRayCastable: false}, {object: this.mesh, isRayCastable: false}] }
+    getDrawables() { return [{object: this.mesh, isRayCastable: false}] }
+
+    /**
+     * Returns the list of lights attached with this object
+     * @returns {Array} array of threejs lights
+     */
+    getLights() { return [{object: this.light, isRayCastable: false}, ] }
 
     /**
      * Used for notifying the SceneManager if this object is drawable in screen.

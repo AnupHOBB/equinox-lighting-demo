@@ -1,5 +1,9 @@
 import * as THREE from 'three'
 import { RayCast } from './RayCast.js'
+import { EffectComposer } from '../node_modules/three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from '../node_modules/three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from '../node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { ShaderPass } from '../node_modules/three/examples/jsm/postprocessing/ShaderPass.js'
 
 /**
  * Parent class for all actors, camera managers and any object that appears as part of the scene
@@ -37,6 +41,12 @@ export class SceneObject
      * @returns {Array} array of threejs mesh objects
      */
     getDrawables() { return [] }
+
+    /**
+     * Returns the list of lights attached with this object
+     * @returns {Array} array of threejs lights
+     */
+    getLights() { return [] }
 
     /**
      * Used for notifying the SceneManager if this object should be included in raycasting.
@@ -109,17 +119,36 @@ class SceneCore
      */
     constructor(canvas, sceneManager)
     {
-        this.renderer = new THREE.WebGLRenderer({canvas, antialias:true})
-        this.renderer.shadowMap.enabled = true
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
         this.scene = new THREE.Scene()
         this.sceneManager = sceneManager
         this.rayCast = new RayCast()
         this.activeCameraManager = null
+        this.renderer = new THREE.WebGLRenderer({canvas, antialias:true})
+        this.renderer.shadowMap.enabled = true
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
         this.sceneObjectMap = new Map()
         this.inactiveObjNameMap = new Map()
         this.noticeBoard = []
         window.requestAnimationFrame(()=>this.renderLoop())
+
+        this.bloomComposer = new EffectComposer(this.renderer)
+        this.bloomComposer.renderToScreen = false
+        this.bloomScene = new THREE.Scene()
+        this.finalComposer = new EffectComposer(this.renderer)
+
+        this.vertexShader = 'varying vec2 vUv;'+
+        'void main() {'+
+        'vUv = uv;'+
+        'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);'+
+        '}'
+
+        this.fragmentShader = 'uniform sampler2D baseTexture;'+
+        'uniform sampler2D bloomTexture;'+
+        'varying vec2 vUv;'+
+        'void main() {'+
+        'gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv);'+
+        '}'
+
         this.fpsCounter = 0
         this.fpsCounterElement = document.getElementById('fps-counter')
         setInterval(()=>{
@@ -140,7 +169,7 @@ class SceneCore
             this.inactiveObjNameMap.set(sceneObject.name, null)
         else if (sceneObject.isReady())
         {
-            this.addToScene(sceneObject.getDrawables())     
+            this.addToScene(sceneObject)     
             sceneObject.onSceneStart(this.sceneManager)
         }
         this.popNoticeBoard(sceneObject)
@@ -148,7 +177,7 @@ class SceneCore
 
     /**
      * Checks any messages for the scene object in the notice board and sends that message to it if there is one.
-     * @param {*} sceneObject sceneObject that needs to be notified if a message was posted for it.
+     * @param {SceneObject} sceneObject sceneObject that needs to be notified if a message was posted for it.
      */
     popNoticeBoard(sceneObject)
     {
@@ -199,6 +228,23 @@ class SceneCore
         {
             this.activeCameraManager = cameraManager
             this.activeCameraManager.onActive(this.sceneManager)
+            
+            this.bloomComposer.addPass(new RenderPass(this.bloomScene, this.activeCameraManager.getCamera()))
+            let unrealBloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 3, 0, 1)
+            unrealBloomPass.threshold = 0
+            unrealBloomPass.strength = 3
+            unrealBloomPass.radius = 1
+            this.bloomComposer.addPass(unrealBloomPass)
+
+            this.finalComposer.addPass(new RenderPass(this.scene, this.activeCameraManager.getCamera()))
+            this.finalComposer.addPass(new ShaderPass(new THREE.ShaderMaterial({
+                uniforms: {
+                    baseTexture: { value: null },
+                    bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
+                },
+                vertexShader: this.vertexShader,
+                fragmentShader: this.fragmentShader
+            }), 'baseTexture'))
         } 
     }
 
@@ -242,8 +288,14 @@ class SceneCore
             this.activeCameraManager.setAspectRatio(window.innerWidth/window.innerHeight)
             this.activeCameraManager.updateMatrices()
             this.queryReadyObjects()
+
             this.renderer.setSize(window.innerWidth, window.innerHeight)
-            this.renderer.render(this.scene, this.activeCameraManager.getCamera())
+            this.bloomComposer.setSize(window.innerWidth, window.innerHeight)
+            this.bloomComposer.render()
+
+            this.finalComposer.setSize(window.innerWidth, window.innerHeight)
+            this.finalComposer.render()
+
             this.notifyObjects()
         }
         this.fpsCounter++
@@ -273,7 +325,7 @@ class SceneCore
                 let sceneObject = this.sceneObjectMap.get(sceneObjectName)
                 if (sceneObject.isReady())
                 {   
-                    this.addToScene(sceneObject.getDrawables())
+                    this.addToScene(sceneObject)
                     sceneObject.onSceneStart(this.sceneManager)
                     this.inactiveObjNameMap.delete(sceneObjectName)
                 } 
@@ -282,16 +334,32 @@ class SceneCore
     }
 
     /**
-     * Adds a threejs object into the threejs scene within SceneCore and ragisters that same object as ray castable if rayCastable value is true.
-     * @param {Array} drawables array of drawable object in this format : {object: THREE.Object3D, isRayCastable: Boolean}
+     * Adds a threejs object into the threejs scene within SceneCore and registers that same object as ray castable if rayCastable value is true.
+     * @param {SceneObject} sceneObject instance of SceneObject class
      */
-    addToScene(drawables) 
+    addToScene(sceneObject) 
     { 
-        for (let drawable of drawables)
+        let drawables = sceneObject.getDrawables()
+        let lights = sceneObject.getLights()
+        if (lights.length == 0)
         {
-            this.scene.add(drawable.object) 
-            if (drawable.isRayCastable)
-                this.rayCast.add(drawable.object)
+            for (let drawable of drawables)
+            {
+                this.scene.add(drawable.object) 
+                if (drawable.isRayCastable)
+                    this.rayCast.add(drawable.object)
+            }
         }
-    } 
+        else
+        {
+            for (let drawable of drawables)
+            {
+                this.bloomScene.add(drawable.object) 
+                if (drawable.isRayCastable)
+                    this.rayCast.add(drawable.object)
+            }
+            for (let light of lights)
+                this.scene.add(light.object) 
+        }
+    }
 }
