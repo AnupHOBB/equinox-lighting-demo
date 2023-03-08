@@ -140,7 +140,7 @@ export class DirectLight extends SceneObject
         this.light.intensity = this.intensity * cosine
         sceneManager.broadcastTo('DirectLight', 'AmbientLight', cosine)
         if (type == 'season')
-            this.daynightColor = MISC.interpolateColors(new THREE.Color(164/255, 191/255, 210/255), new THREE.Color(1, 1, 1), percent)
+            this.daynightColor = MISC.interpolateColors(new THREE.Color(188/255, 206/255, 222/255), new THREE.Color(1, 1, 1), percent)
         else if (type == 'daynight')  
             this.seasonColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
         this.light.color = MISC.multiplyColors(this.daynightColor, this.seasonColor)
