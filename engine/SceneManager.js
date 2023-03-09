@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import { RayCast } from './RayCast.js'
 import { EffectComposer } from '../node_modules/three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from '../node_modules/three/examples/jsm/postprocessing/RenderPass.js'
+import { TAARenderPass } from '../node_modules/three/examples/jsm/postprocessing/TAARenderPass.js'
 import { UnrealBloomPass } from '../node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from '../node_modules/three/examples/jsm/postprocessing/ShaderPass.js'
+import { FXAAShader } from '../node_modules/three/examples/jsm/shaders/FXAAShader.js'
 
 /**
  * Parent class for all actors, camera managers and any object that appears as part of the scene
@@ -147,7 +149,7 @@ class SceneCore
         this.sceneManager = sceneManager
         this.rayCast = new RayCast()
         this.activeCameraManager = null
-        this.renderer = new THREE.WebGLRenderer({canvas, antialias:true})
+        this.renderer = new THREE.WebGLRenderer({canvas, alpha:true})
         this.renderer.shadowMap.enabled = true
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
         this.sceneObjectMap = new Map()
@@ -158,6 +160,8 @@ class SceneCore
         this.bloomComposer = new EffectComposer(this.renderer)
         this.bloomComposer.renderToScreen = false
         this.finalComposer = new EffectComposer(this.renderer)
+
+        this.fxaaPass = new ShaderPass(FXAAShader)
 
         this.vertexShader = 'varying vec2 vUv;'+
         'void main() {'+
@@ -259,7 +263,14 @@ class SceneCore
             unrealBloomPass.radius = 1
             this.bloomComposer.addPass(unrealBloomPass)
 
+            //Comment this line before enabling the TAA
             this.finalComposer.addPass(new RenderPass(this.scene, this.activeCameraManager.getCamera()))
+            /* 
+            //Temporal anti aliasing(TAA) code
+            let taaPass = new TAARenderPass(this.scene, this.activeCameraManager.getCamera())
+            taaPass.unbiased = false
+            taaPass.sampleLevel = 2
+            this.finalComposer.addPass(taaPass) */
             this.finalComposer.addPass(new ShaderPass(new THREE.ShaderMaterial({
                 uniforms: {
                     baseTexture: { value: null },
@@ -268,6 +279,7 @@ class SceneCore
                 vertexShader: this.vertexShader,
                 fragmentShader: this.fragmentShader
             }), 'baseTexture'))
+            this.finalComposer.addPass(this.fxaaPass)
         } 
     }
 
@@ -319,6 +331,9 @@ class SceneCore
             this.bloomComposer.render()
 
             this.unblackenSceneObjects()
+
+            this.fxaaPass.material.uniforms['resolution'].value.x = 1/(window.innerWidth * window.devicePixelRatio)
+            this.fxaaPass.material.uniforms['resolution'].value.y = 1/(window.innerHeight * window.devicePixelRatio)
 
             this.finalComposer.setSize(window.innerWidth, window.innerHeight)
             this.finalComposer.render()
