@@ -69,7 +69,7 @@ export class ShapeActor extends SceneObject
      * @param {String} senderName name of the object who posted the message
      * @param {any} data any object sent as part of the message
      */
-    onMessage(sceneManager, senderName, data) { this.mesh.material.color = data }
+    onMessage(sceneManager, senderName, data) { this.material.color = data }
 }
 
 /**

@@ -10,9 +10,9 @@ import { AmbientLight, DirectLight } from './engine/Light.js'
 import { TextureLoader } from 'three'
 
 let assetLoader = new AssetLoader()
-assetLoader.addGLTFLoader('./assets/roof.glb', new GLTFLoader())
+assetLoader.addGLTFLoader('./assets/eq_animation.glb', new GLTFLoader())
 assetLoader.addGLTFLoader('./assets/scene.glb', new GLTFLoader())
-assetLoader.addGLTFLoader('./assets/envmap.png', new TextureLoader())
+assetLoader.addTextureLoader('./assets/envmap.png', new TextureLoader())
 assetLoader.execute(p=>{}, onComplete)
 
 /**
@@ -29,7 +29,7 @@ function onComplete(assetMap)
     scene.setPosition(-39, -10.5, 60.4)
     sceneManager.register(scene)
     
-    let roof = new MeshActor('Roof', assetMap.get('./assets/roof.glb'))
+    let roof = new MeshActor('Roof', assetMap.get('./assets/eq_animation.glb'))
     roof.setPosition(2, -2, -3)
     sceneManager.register(roof)
     
@@ -67,5 +67,12 @@ function onComplete(assetMap)
     sliderSeason.addEventListener('input', ()=> {
         sceneManager.broadcastTo('SliderSeason', 'DirectLight', { delta: prevSliderSeason - sliderSeason.value, percent: sliderSeason.value/sliderSeason.max })
         prevSliderSeason = sliderSeason.value
+    })
+
+    let prevSliderRoof = 0
+    let sliderRoof = document.getElementById('slider-roof')
+    sliderRoof.addEventListener('input', ()=> {
+        sceneManager.broadcastTo('Slider', 'Roof', ((sliderRoof.value - prevSliderRoof)/180))
+        prevSliderRoof = sliderRoof.value
     })
 }
