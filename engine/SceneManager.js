@@ -10,6 +10,30 @@ import { ShaderPass } from '../node_modules/three/examples/jsm/postprocessing/Sh
  */
 export class SceneObject
 {
+    constructor(name) { this.name = name }
+    /**
+     * Applies texture on the object.
+     * @param {THREE.Texture} texture threejs texture object
+     */
+    applyTexture(texture) {}
+
+    /**
+     * Applies color on the object.
+     * @param {THREE.Color} color threejs color object 
+     */
+    applyColor(color) {}
+
+    /**
+     * Applies material on the object.
+     * @param {THREE.Material} material threejs material object 
+     */
+    applyMaterial(material) {}
+
+    /**
+     * Restores the original material on the object.
+     */
+    restoreMaterial() {}
+
     /**
      * Called by SceneManager when there is a message for this object posted by any other object registered in SceneManager.
      * @param {SceneManager} sceneManager the SceneManager object
@@ -72,10 +96,10 @@ export class SceneManager
     register(sceneObject) { this.core.register(sceneObject) }
 
     /**
-     * Removes the threejs object from the active scene.
-     * @param {Object3D} threeJSObject instance of object3D that needs to be removed from the scene
+     * Removes the sceneObject from the active scene.
+     * @param {SceneObject} sceneObject instance of object3D that needs to be removed from the scene
      */
-    remove(threeJSObject) { this.core.scene.remove(threeJSObject) }
+    remove(sceneObject) { this.core.removeFromScene(sceneObject) }
 
     /**
      * Delegates call to SceneCore's getRasterCoordIfNearest.  
@@ -133,7 +157,6 @@ class SceneCore
 
         this.bloomComposer = new EffectComposer(this.renderer)
         this.bloomComposer.renderToScreen = false
-        this.bloomScene = new THREE.Scene()
         this.finalComposer = new EffectComposer(this.renderer)
 
         this.vertexShader = 'varying vec2 vUv;'+
@@ -229,10 +252,10 @@ class SceneCore
             this.activeCameraManager = cameraManager
             this.activeCameraManager.onActive(this.sceneManager)
             
-            this.bloomComposer.addPass(new RenderPass(this.bloomScene, this.activeCameraManager.getCamera()))
-            let unrealBloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 3, 0, 1)
+            this.bloomComposer.addPass(new RenderPass(this.scene, this.activeCameraManager.getCamera()))
+            let unrealBloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 2, 0, 1)
             unrealBloomPass.threshold = 0
-            unrealBloomPass.strength = 3
+            unrealBloomPass.strength = 2
             unrealBloomPass.radius = 1
             this.bloomComposer.addPass(unrealBloomPass)
 
@@ -289,9 +312,13 @@ class SceneCore
             this.activeCameraManager.updateMatrices()
             this.queryReadyObjects()
 
+            this.blackenSceneObjects()
+
             this.renderer.setSize(window.innerWidth, window.innerHeight)
             this.bloomComposer.setSize(window.innerWidth, window.innerHeight)
             this.bloomComposer.render()
+
+            this.unblackenSceneObjects()
 
             this.finalComposer.setSize(window.innerWidth, window.innerHeight)
             this.finalComposer.render()
@@ -300,6 +327,22 @@ class SceneCore
         }
         this.fpsCounter++
         window.requestAnimationFrame(()=>this.renderLoop())
+    }
+
+    blackenSceneObjects()
+    {
+        let sceneObjects = this.sceneObjectMap.values()
+        for (let sceneObject of sceneObjects)
+            sceneObject.applyMaterial(new THREE.MeshBasicMaterial({color: new THREE.Color(0, 0, 0)}))
+        this.addLightMeshToScene()
+    }
+
+    unblackenSceneObjects()
+    {
+        let sceneObjects = this.sceneObjectMap.values()
+        for (let sceneObject of sceneObjects)
+            sceneObject.restoreMaterial()
+        this.removeLightMeshFromScene()
     }
 
     /**
@@ -341,25 +384,46 @@ class SceneCore
     { 
         let drawables = sceneObject.getDrawables()
         let lights = sceneObject.getLights()
-        if (lights.length == 0)
+        for (let drawable of drawables)
         {
-            for (let drawable of drawables)
-            {
-                this.scene.add(drawable.object) 
-                if (drawable.isRayCastable)
-                    this.rayCast.add(drawable.object)
-            }
+            if (sceneObject.name != 'DirectLight')
+                this.scene.add(drawable.object)
+            if (drawable.isRayCastable)
+                this.rayCast.add(drawable.object)
         }
-        else
-        {
-            for (let drawable of drawables)
-            {
-                this.bloomScene.add(drawable.object) 
-                if (drawable.isRayCastable)
-                    this.rayCast.add(drawable.object)
-            }
-            for (let light of lights)
-                this.scene.add(light.object) 
-        }
+        for (let light of lights)
+            this.scene.add(light.object)
+    }
+
+    /**
+     * Removes a threejs object from the threejs scene within SceneCore
+     * @param {SceneObject} sceneObject instance of SceneObject class
+     */
+    removeFromScene(sceneObject)
+    {
+        let drawables = sceneObject.getDrawables()
+        let lights = sceneObject.getLights()
+        for (let drawable of drawables)
+            this.scene.remove(drawable.object)
+        for (let light of lights)
+            this.scene.remove(light.object)
+    }
+
+    addLightMeshToScene()
+    {
+        let sceneObject = this.sceneObjectMap.get('DirectLight')
+        let drawables = sceneObject.getDrawables()
+        for (let drawable of drawables)
+            if (sceneObject.name == 'DirectLight')
+                this.scene.add(drawable.object)
+    }
+
+    removeLightMeshFromScene()
+    {
+        let sceneObject = this.sceneObjectMap.get('DirectLight')
+        let drawables = sceneObject.getDrawables()
+        for (let drawable of drawables)
+            if (sceneObject.name == 'DirectLight')
+                this.scene.remove(drawable.object)
     }
 }

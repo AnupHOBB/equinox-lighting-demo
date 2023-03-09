@@ -12,8 +12,7 @@ export class InputManager extends SceneObject
      */
     constructor(name, canvas)
     {
-        super()
-        this.name = name
+        super(name)
         this.keyEvent = new KeyEventCore()
         this.mouseEvent = new MouseEventCore(canvas)
     }

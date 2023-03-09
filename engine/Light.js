@@ -11,8 +11,7 @@ export class AmbientLight extends SceneObject
 {
     constructor(name, color, intensity) 
     {
-        super()
-        this.name = name 
+        super(name)
         this.light = new THREE.AmbientLight(color, intensity)
         this.intensity = intensity
     }
@@ -55,8 +54,7 @@ export class DirectLight extends SceneObject
 {
     constructor(name, position, size, lookAt) 
     { 
-        super()
-        this.name = name 
+        super(name)
         this.enableGizmo = false
         this.enabled = false
         this.intensity = 1
@@ -73,7 +71,7 @@ export class DirectLight extends SceneObject
         this.light.shadow.camera.top = 10
         this.light.shadow.bias = -0.0005
         this.gizmo = new THREE.CameraHelper(this.light.shadow.camera) 
-        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 32), new THREE.MeshPhongMaterial({color: 0xFCE570, emissive: 0xFCE570}))
+        this.mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 32), new THREE.MeshPhongMaterial({color: new THREE.Color(252/255, 229/255, 112/255)}))
         this.mesh.position.set(position.x, position.y, position.z)
         this.lightOrbiter = new OrbitControl(this.light, lookAt)
         this.meshOrbiter = new OrbitControl(this.mesh, lookAt)
@@ -144,8 +142,7 @@ export class DirectLight extends SceneObject
         else if (type == 'daynight')  
         {
             this.daynightColor = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(1, 1, 1), percent)
-            this.mesh.material.color = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(252/255, 229/255, 112/255), percent)
-            this.mesh.material.emissive = MISC.interpolateColors(new THREE.Color(250/255, 214/255, 165/255), new THREE.Color(252/255, 229/255, 112/255), percent)
+            this.mesh.material.color = MISC.interpolateColors(new THREE.Color(255/255, 204/255, 1/255), new THREE.Color(252/255, 229/255, 112/255), percent)
         }
         this.light.color = MISC.multiplyColors(this.daynightColor, this.seasonColor)
         sceneManager.broadcastTo('DirectLight', 'Background', this.light.color)

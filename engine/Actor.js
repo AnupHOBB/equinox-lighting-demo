@@ -14,26 +14,37 @@ export class ShapeActor extends SceneObject
      */
     constructor(name, geometry, material, supportShadow)
     {
-        super()
-        this.name = name
+        super(name)
         this.mesh = new THREE.Mesh(geometry, material)
         this.mesh.receiveShadow = supportShadow
+        this.material = this.mesh.material.clone()
     }
 
     /**
-     * Applies texture on the floor object.
+     * Applies texture on the object.
      * @param {THREE.Texture} texture threejs texture object
      */
     applyTexture(texture) { this.mesh.material.map = texture }
 
     /**
-     * Applies color on the floor object.
+     * Applies color on the object.
      * @param {THREE.Color} color threejs color object 
      */
     applyColor(color) { this.mesh.material.color = color }
 
     /**
-     * Sets the position of the floor in world space
+     * Applies material on the object.
+     * @param {THREE.Material} material threejs material object 
+     */
+    applyMaterial(material) { this.mesh.material = material }
+
+    /**
+     * Restores the original material on the object.
+     */
+    restoreMaterial() {  this.mesh.material = this.material.clone() }
+
+    /**
+     * Sets the position of the object in world space
      * @param {Number} x x-coordinate in world space
      * @param {Number} y y-coordinate in world space
      * @param {Number} z z-coordinate in world space 
@@ -72,8 +83,7 @@ export class MeshActor extends SceneObject
      */
     constructor(name, model) 
     {
-        super()
-        this.name = name 
+        super(name)
         this.core = new MeshActorCore(model)
     }
 
@@ -110,10 +120,15 @@ export class MeshActor extends SceneObject
     applyColor(color) { this.core.applyColor(color) }
 
     /**
-     * Delegates call to MeshActorCore changeTexture
-     * @param {THREE.Color} color threejs color object 
+     * Applies material on the object.
+     * @param {THREE.Material} material threejs material object 
      */
-    changeTexture() { this.core.changeTexture() }
+    applyMaterial(material) { this.core.applyMaterial(material) }
+
+    /**
+     * Restores the original material on the object.
+     */
+    restoreMaterial() { this.core.restoreMaterial() }
 
     /**
      * Adds a selectable hot spot object in the mesh
@@ -166,14 +181,27 @@ class MeshActorCore
     constructor(model)
     {
         this.meshes = []
+        this.materials = []
         model.scene.children.forEach(mesh=>this.meshes.push(mesh))
         this.meshes.forEach(mesh => {
-            mesh.children.forEach(child => {
-                child.material.shadowSide = THREE.BackSide
-                child.material.metalness = 0
-                child.receiveShadow = true
-                child.castShadow = true
-            })
+            if (mesh.children.length > 0)
+            {
+                mesh.children.forEach(child => {
+                    child.material.shadowSide = THREE.BackSide
+                    child.material.metalness = 0
+                    child.receiveShadow = true
+                    child.castShadow = true
+                    this.materials.push(child.material.clone())
+                })
+            }
+            else
+            {
+                mesh.material.shadowSide = THREE.BackSide
+                mesh.material.metalness = 0
+                mesh.receiveShadow = true
+                mesh.castShadow = true
+                this.materials.push(mesh.material.clone())
+            }
         })
         const clip = model.animations[0]
         this.mixer = null
@@ -228,6 +256,42 @@ class MeshActorCore
      * @param {THREE.Color} color threejs color object 
      */
     applyColor(color) { this.meshes.forEach(mesh => mesh.children.forEach(child => child.material.color = color)) }
+
+    /**
+     * Applies material on the object.
+     * @param {THREE.Material} material threejs material object 
+     */
+    applyMaterial(material) 
+    { 
+        this.meshes.forEach(mesh => {
+            if (mesh.children.length > 0)
+            {
+                mesh.children.forEach(child => {
+                    child.material = material
+                })
+            }
+            else
+                mesh.material = material
+        })
+    }
+
+    /**
+     * Restores the original material on the object.
+     */
+    restoreMaterial() 
+    {  
+        let i = 0
+        this.meshes.forEach(mesh => {
+            if (mesh.children.length > 0)
+            {
+                mesh.children.forEach(child => {
+                    child.material = this.materials[i++].clone()
+                })
+            }
+            else
+                mesh.material = this.materials[i++].clone()
+        })
+    }
 
     /**
      * Called by SceneManager when there is a message for this object posted by any other object registered in SceneManager.
