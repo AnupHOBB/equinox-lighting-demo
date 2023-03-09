@@ -3,6 +3,8 @@ import { SceneObject } from './SceneManager.js'
 import { MATHS } from './helpers/maths.js'
 import { MISC } from './helpers/misc.js'
 import { OrbitControl } from './OrbitControl.js'
+import { Lensflare } from '../node_modules/three/examples/jsm/objects/Lensflare.js'
+import { LensflareElement } from '../node_modules/three/examples/jsm/objects/Lensflare.js'
 
 /**
  * Wraps the threejs ambient light object
@@ -76,6 +78,12 @@ export class DirectLight extends SceneObject
         this.lightOrbiter = new OrbitControl(this.light, lookAt)
         this.meshOrbiter = new OrbitControl(this.mesh, lookAt)
         this.lookAt = lookAt
+
+        const textureLoader = new THREE.TextureLoader()
+        const lensFlareTexture0 = textureLoader.load('../assets/lensflareblue.png')
+        const lensFlare = new Lensflare()
+        lensFlare.addElement(new LensflareElement(lensFlareTexture0, 2048, 0.5))
+        this.light.add(lensFlare)
 
         let vLookat2Light = MATHS.subtractVectors(this.light.position, lookAt)
         let right =  MATHS.normalize(new THREE.Vector3(vLookat2Light.x, 0, vLookat2Light.z))
