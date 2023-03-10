@@ -80,9 +80,9 @@ export class DirectLight extends SceneObject
         this.lookAt = lookAt
 
         const textureLoader = new THREE.TextureLoader()
-        const lensFlareTexture0 = textureLoader.load('../assets/lensflareblue.png')
+        const lensFlareTexture0 = textureLoader.load('../assets/lense-flares-overlay-png-2.jpg')
         const lensFlare = new Lensflare()
-        lensFlare.addElement(new LensflareElement(lensFlareTexture0, 2048, 0.5))
+        lensFlare.addElement(new LensflareElement(lensFlareTexture0, 512, 0.4))
         this.light.add(lensFlare)
 
         let vLookat2Light = MATHS.subtractVectors(this.light.position, lookAt)

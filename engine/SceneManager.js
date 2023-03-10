@@ -429,8 +429,7 @@ class SceneCore
         let sceneObject = this.sceneObjectMap.get('DirectLight')
         let drawables = sceneObject.getDrawables()
         for (let drawable of drawables)
-            if (sceneObject.name == 'DirectLight')
-                this.scene.add(drawable.object)
+            this.scene.add(drawable.object)
     }
 
     removeLightMeshFromScene()
@@ -438,7 +437,6 @@ class SceneCore
         let sceneObject = this.sceneObjectMap.get('DirectLight')
         let drawables = sceneObject.getDrawables()
         for (let drawable of drawables)
-            if (sceneObject.name == 'DirectLight')
-                this.scene.remove(drawable.object)
+            this.scene.remove(drawable.object)
     }
 }
