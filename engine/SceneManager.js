@@ -1,11 +1,6 @@
 import * as THREE from 'three'
 import { RayCast } from './RayCast.js'
-import { EffectComposer } from '../node_modules/three/examples/jsm/postprocessing/EffectComposer.js'
-import { RenderPass } from '../node_modules/three/examples/jsm/postprocessing/RenderPass.js'
-import { TAARenderPass } from '../node_modules/three/examples/jsm/postprocessing/TAARenderPass.js'
-import { UnrealBloomPass } from '../node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js'
-import { ShaderPass } from '../node_modules/three/examples/jsm/postprocessing/ShaderPass.js'
-import { FXAAShader } from '../node_modules/three/examples/jsm/shaders/FXAAShader.js'
+import { SceneRenderer } from './SceneRenderer.js'
 
 /**
  * Parent class for all actors, camera managers and any object that appears as part of the scene
@@ -145,37 +140,15 @@ class SceneCore
      */
     constructor(canvas, sceneManager)
     {
-        this.scene = new THREE.Scene()
+
         this.sceneManager = sceneManager
         this.rayCast = new RayCast()
         this.activeCameraManager = null
-        this.renderer = new THREE.WebGLRenderer({canvas, alpha:true})
-        this.renderer.shadowMap.enabled = true
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
         this.sceneObjectMap = new Map()
         this.inactiveObjNameMap = new Map()
         this.noticeBoard = []
+        this.sceneRenderer = new SceneRenderer(canvas)
         window.requestAnimationFrame(()=>this.renderLoop())
-
-        this.bloomComposer = new EffectComposer(this.renderer)
-        this.bloomComposer.renderToScreen = false
-        this.finalComposer = new EffectComposer(this.renderer)
-
-        this.fxaaPass = new ShaderPass(FXAAShader)
-
-        this.vertexShader = 'varying vec2 vUv;'+
-        'void main() {'+
-        'vUv = uv;'+
-        'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);'+
-        '}'
-
-        this.fragmentShader = 'uniform sampler2D baseTexture;'+
-        'uniform sampler2D bloomTexture;'+
-        'varying vec2 vUv;'+
-        'void main() {'+
-        'gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv);'+
-        '}'
-
         this.fpsCounter = 0
         this.fpsCounterElement = document.getElementById('fps-counter')
         setInterval(()=>{
@@ -255,32 +228,8 @@ class SceneCore
         {
             this.activeCameraManager = cameraManager
             this.activeCameraManager.onActive(this.sceneManager)
-            
-            this.bloomComposer.addPass(new RenderPass(this.scene, this.activeCameraManager.getCamera()))
-            let unrealBloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 2, 0, 1)
-            unrealBloomPass.threshold = 0
-            unrealBloomPass.strength = 2
-            unrealBloomPass.radius = 1
-            this.bloomComposer.addPass(unrealBloomPass)
-
-            //Comment this line before enabling the TAA
-            this.finalComposer.addPass(new RenderPass(this.scene, this.activeCameraManager.getCamera()))
-            /* 
-            //Temporal anti aliasing(TAA) code
-            let taaPass = new TAARenderPass(this.scene, this.activeCameraManager.getCamera())
-            taaPass.unbiased = false
-            taaPass.sampleLevel = 2
-            this.finalComposer.addPass(taaPass) */
-            this.finalComposer.addPass(new ShaderPass(new THREE.ShaderMaterial({
-                uniforms: {
-                    baseTexture: { value: null },
-                    bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
-                },
-                vertexShader: this.vertexShader,
-                fragmentShader: this.fragmentShader
-            }), 'baseTexture'))
-            this.finalComposer.addPass(this.fxaaPass)
-        } 
+            this.sceneRenderer.changeCamera(this.activeCameraManager.getCamera())
+        }
     }
 
     /**
@@ -323,41 +272,11 @@ class SceneCore
             this.activeCameraManager.setAspectRatio(window.innerWidth/window.innerHeight)
             this.activeCameraManager.updateMatrices()
             this.queryReadyObjects()
-
-            this.blackenSceneObjects()
-
-            this.renderer.setSize(window.innerWidth, window.innerHeight)
-            this.bloomComposer.setSize(window.innerWidth, window.innerHeight)
-            this.bloomComposer.render()
-
-            this.unblackenSceneObjects()
-
-            this.fxaaPass.material.uniforms['resolution'].value.x = 1/(window.innerWidth * window.devicePixelRatio)
-            this.fxaaPass.material.uniforms['resolution'].value.y = 1/(window.innerHeight * window.devicePixelRatio)
-
-            this.finalComposer.setSize(window.innerWidth, window.innerHeight)
-            this.finalComposer.render()
-
+            this.sceneRenderer.render()
             this.notifyObjects()
         }
         this.fpsCounter++
         window.requestAnimationFrame(()=>this.renderLoop())
-    }
-
-    blackenSceneObjects()
-    {
-        let sceneObjects = this.sceneObjectMap.values()
-        for (let sceneObject of sceneObjects)
-            sceneObject.applyMaterial(new THREE.MeshBasicMaterial({color: new THREE.Color(0, 0, 0)}))
-        this.addLightMeshToScene()
-    }
-
-    unblackenSceneObjects()
-    {
-        let sceneObjects = this.sceneObjectMap.values()
-        for (let sceneObject of sceneObjects)
-            sceneObject.restoreMaterial()
-        this.removeLightMeshFromScene()
     }
 
     /**
@@ -401,13 +320,13 @@ class SceneCore
         let lights = sceneObject.getLights()
         for (let drawable of drawables)
         {
-            if (sceneObject.name != 'DirectLight')
-                this.scene.add(drawable.object)
+            this.sceneRenderer.add(drawable.object, lights.length > 0)
             if (drawable.isRayCastable)
                 this.rayCast.add(drawable.object)
         }
-        for (let light of lights)
-            this.scene.add(light.object)
+        for (let light of lights)  
+            this.sceneRenderer.add(light.object, false)
+
     }
 
     /**
@@ -419,24 +338,8 @@ class SceneCore
         let drawables = sceneObject.getDrawables()
         let lights = sceneObject.getLights()
         for (let drawable of drawables)
-            this.scene.remove(drawable.object)
+            this.sceneRenderer.remove(drawable.object)
         for (let light of lights)
-            this.scene.remove(light.object)
-    }
-
-    addLightMeshToScene()
-    {
-        let sceneObject = this.sceneObjectMap.get('DirectLight')
-        let drawables = sceneObject.getDrawables()
-        for (let drawable of drawables)
-            this.scene.add(drawable.object)
-    }
-
-    removeLightMeshFromScene()
-    {
-        let sceneObject = this.sceneObjectMap.get('DirectLight')
-        let drawables = sceneObject.getDrawables()
-        for (let drawable of drawables)
-            this.scene.remove(drawable.object)
+            this.sceneRenderer.remove(light.object)
     }
 }
