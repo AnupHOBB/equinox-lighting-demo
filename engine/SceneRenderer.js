@@ -61,7 +61,6 @@ class SceneRendererCore
             {    
                 this.mainSceneObjects.push(threeJsObject)
                 this.addToScene(threeJsObject)
-                this.iterateRecursively(threeJsObject, obj=>this.materialMap.set(obj.uuid, obj.material.clone()))
             }
         }
     }
@@ -133,13 +132,16 @@ class SceneRendererCore
     blacken(threeJsObject)
     {
         if (threeJsObject.isLight == undefined || !threeJsObject.isLight)
+        {
+            this.materialMap.set(threeJsObject.uuid, threeJsObject.material.clone()) 
             threeJsObject.material = new THREE.MeshBasicMaterial({color: new THREE.Color(0, 0, 0)})
+        }
     }
 
     unblacken(threeJsObject) 
     { 
         if (threeJsObject.isLight == undefined || !threeJsObject.isLight)
-            threeJsObject.material = this.materialMap.get(threeJsObject.uuid).clone()
+            threeJsObject.material = this.materialMap.get(threeJsObject.uuid)
     }
 
     addToScene(threeJsObject) { this.scene.add(threeJsObject) }

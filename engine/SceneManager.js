@@ -21,17 +21,6 @@ export class SceneObject
     applyColor(color) {}
 
     /**
-     * Applies material on the object.
-     * @param {THREE.Material} material threejs material object 
-     */
-    applyMaterial(material) {}
-
-    /**
-     * Restores the original material on the object.
-     */
-    restoreMaterial() {}
-
-    /**
      * Called by SceneManager when there is a message for this object posted by any other object registered in SceneManager.
      * @param {SceneManager} sceneManager the SceneManager object
      * @param {String} senderName name of the object who posted the message
@@ -146,7 +135,7 @@ class SceneCore
         this.activeCameraManager = null
         this.sceneObjectMap = new Map()
         this.inactiveObjNameMap = new Map()
-        this.noticeBoard = []
+        this.messages = []
         this.sceneRenderer = new SceneRenderer(canvas)
         window.requestAnimationFrame(()=>this.renderLoop())
         this.fpsCounter = 0
@@ -181,12 +170,12 @@ class SceneCore
      */
     popNoticeBoard(sceneObject)
     {
-        for (let notice of this.noticeBoard)
+        for (let message of this.messages)
         {
-            if (notice.to == sceneObject.name)
+            if (message.to == sceneObject.name)
             {    
-                sceneObject.onMessage(this.sceneManager, notice.from, notice.data)
-                this.noticeBoard.splice(this.noticeBoard.indexOf(notice), 1) 
+                sceneObject.onMessage(this.sceneManager, message.from, message.data)
+                this.messages.splice(this.messages.indexOf(message), 1) 
             }
         }
     }
@@ -244,7 +233,7 @@ class SceneCore
         if (sceneObject != undefined)
             sceneObject.onMessage(this.sceneManager, from, data)
         else
-            this.noticeBoard.push({ from: from, to: to, data: data })
+            this.messages.push({ from: from, to: to, data: data })
     }
 
     /**
