@@ -134,7 +134,7 @@ export class DirectLight extends SceneObject
         }
         else if (senderName == 'SliderSeason')
         {    
-            this.orbit(data.delta, this.seasonAxis)
+            this.orbit(-data.delta, this.seasonAxis)
             this.updateLightIntensity(sceneManager, 'season', data.percent)
         }
     }

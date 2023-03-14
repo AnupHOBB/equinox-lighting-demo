@@ -65,7 +65,7 @@ function onComplete(assetMap)
     let prevSliderSeason = 0
     let sliderSeason = document.getElementById('slider-season')
     sliderSeason.addEventListener('input', ()=> {
-        sceneManager.broadcastTo('SliderSeason', 'DirectLight', { delta: prevSliderSeason - sliderSeason.value, percent: sliderSeason.value/sliderSeason.max })
+        sceneManager.broadcastTo('SliderSeason', 'DirectLight', { delta: sliderSeason.value - prevSliderSeason, percent: sliderSeason.value/sliderSeason.max })
         prevSliderSeason = sliderSeason.value
     })
 
